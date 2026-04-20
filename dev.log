@@ -1,0 +1,165 @@
+
+> app@0.1.0 dev
+> next dev
+
+▲ Next.js 16.2.4 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://172.20.0.4:3000
+- Environments: .env.local
+✓ Ready in 253ms
+Attention: Next.js now collects completely anonymous telemetry regarding usage.
+This information is used to shape Next.js' roadmap and prioritize features.
+You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:
+https://nextjs.org/telemetry
+
+
+ GET /?_cb=1776597853750 200 in 2.4s (next.js: 2.3s, application-code: 99ms)
+⚠ Blocked cross-origin request to Next.js dev resource /__nextjs_original-stack-frames from "3000-fa3ac68f-0dbd-4395-a44e-fe1a6c86d198.orchids.cloud".
+Cross-origin access to Next.js dev resources is blocked by default for safety.
+
+To allow this host in development, add it to "allowedDevOrigins" in next.config.js and restart the dev server:
+
+// next.config.js
+module.exports = {
+  allowedDevOrigins: ['3000-fa3ac68f-0dbd-4395-a44e-fe1a6c86d198.orchids.cloud'],
+}
+
+Read more: https://nextjs.org/docs/app/api-reference/config/next-config-js/allowedDevOrigins
+ GET /api/wallet/balance 500 in 853ms (next.js: 693ms, application-code: 160ms)
+ GET /?_cb=1776597891194 200 in 68ms (next.js: 5ms, application-code: 63ms)
+ GET /api/wallet/balance 500 in 179ms (next.js: 3ms, application-code: 176ms)
+[browser] A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+https://react.dev/link/hydration-mismatch
+
+  ...
+    <HotReload globalError={[...]} webSocket={WebSocket} staticIndicatorState={{pathname:null, ...}}>
+      <AppDevOverlayErrorBoundary globalError={[...]}>
+        <ReplaySsrOnlyErrors>
+        <DevRootHTTPAccessFallbackBoundary>
+          <HTTPAccessFallbackBoundary notFound={<NotAllowedRootHTTPFallbackError>}>
+            <HTTPAccessFallbackErrorBoundary pathname="/" notFound={<NotAllowedRootHTTPFallbackError>} ...>
+              <RedirectBoundary>
+                <RedirectErrorBoundary router={{...}}>
+                  <Head>
+                  <__next_root_layout_boundary__>
+                    <SegmentViewNode type="layout" pagePath="layout.tsx">
+                      <SegmentTrieNode>
+                      <link>
+                      <script>
+                      <script>
+                      <RootLayout>
+                        <html lang="en" className="geist_a715...">
+                          <body
+                            className="min-h-full flex flex-col"
+-                           __processed_9c4a42f1-da13-4b81-9f28-0c354137bded__="true"
+                          >
+                  ...
+ 
+⚠ Blocked cross-origin request to Next.js dev resource /__nextjs_font/geist-latin.woff2 from "3000-fa3ac68f-0dbd-4395-a44e-fe1a6c86d198.orchids.cloud".
+Cross-origin access to Next.js dev resources is blocked by default for safety.
+
+To allow this host in development, add it to "allowedDevOrigins" in next.config.js and restart the dev server:
+
+// next.config.js
+module.exports = {
+  allowedDevOrigins: ['3000-fa3ac68f-0dbd-4395-a44e-fe1a6c86d198.orchids.cloud'],
+}
+
+Read more: https://nextjs.org/docs/app/api-reference/config/next-config-js/allowedDevOrigins
+  Reload env: .env.local
+ GET /?_cb=1776597891194 200 in 109ms (next.js: 64ms, application-code: 45ms)
+  Reload env: .env.local
+ GET /?_cb=1776597891194 200 in 88ms (next.js: 54ms, application-code: 33ms)
+  Reload env: .env.local
+ GET /?_cb=1776597891194 200 in 79ms (next.js: 53ms, application-code: 26ms)
+  Reload env: .env.local
+ GET /?_cb=1776597891194 200 in 100ms (next.js: 54ms, application-code: 45ms)
+  Reload env: .env.local
+ GET /?_cb=1776597891194 200 in 80ms (next.js: 50ms, application-code: 30ms)
+  Reload env: .env.local
+ GET /?_cb=1776597891194 200 in 107ms (next.js: 58ms, application-code: 49ms)
+  Reload env: .env.local
+ GET /?_cb=1776597891194 200 in 88ms (next.js: 53ms, application-code: 35ms)
+  Reload env: .env.local
+ GET /?_cb=1776597891194 200 in 95ms (next.js: 60ms, application-code: 35ms)
+  Reload env: .env.local
+ GET /?_cb=1776597891194 200 in 106ms (next.js: 59ms, application-code: 48ms)
+  Reload env: .env.local
+ GET /?_cb=1776597891194 200 in 79ms (next.js: 53ms, application-code: 26ms)
+  Reload env: .env.local
+ GET /?_cb=1776597891194 200 in 83ms (next.js: 51ms, application-code: 32ms)
+  Reload env: .env.local
+ GET /?_cb=1776597891194 200 in 72ms (next.js: 45ms, application-code: 27ms)
+  Reload env: .env.local
+ GET /?_cb=1776597891194 200 in 78ms (next.js: 51ms, application-code: 27ms)
+ GET /api/wallet/balance 500 in 178ms (next.js: 168ms, application-code: 11ms)
+ GET /api/wallet/balance 500 in 9ms (next.js: 3ms, application-code: 6ms)
+ GET /?_cb=1776598936784 200 in 145ms (next.js: 3ms, application-code: 142ms)
+[browser] A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+https://react.dev/link/hydration-mismatch
+
+  ...
+    <HotReload globalError={[...]} webSocket={WebSocket} staticIndicatorState={{pathname:null, ...}}>
+      <AppDevOverlayErrorBoundary globalError={[...]}>
+        <ReplaySsrOnlyErrors>
+        <DevRootHTTPAccessFallbackBoundary>
+          <HTTPAccessFallbackBoundary notFound={<NotAllowedRootHTTPFallbackError>}>
+            <HTTPAccessFallbackErrorBoundary pathname="/" notFound={<NotAllowedRootHTTPFallbackError>} ...>
+              <RedirectBoundary>
+                <RedirectErrorBoundary router={{...}}>
+                  <Head>
+                  <__next_root_layout_boundary__>
+                    <SegmentViewNode type="layout" pagePath="layout.tsx">
+                      <SegmentTrieNode>
+                      <link>
+                      <script>
+                      <script>
+                      <RootLayout>
+                        <html lang="en" className="geist_a715...">
+                          <body
+                            className="min-h-full flex flex-col"
+-                           __processed_0e1fe509-7705-467e-b841-5a3e6ec5e971__="true"
+-                           bis_status="ok"
+-                           bis_frame_id="240"
+                          >
+                  ...
+ 
+ GET /api/wallet/balance 500 in 9ms (next.js: 3ms, application-code: 6ms)
+⚠ Blocked cross-origin request to Next.js dev resource /__nextjs_font/geist-mono-latin.woff2 from "3000-fa3ac68f-0dbd-4395-a44e-fe1a6c86d198.orchids.cloud".
+Cross-origin access to Next.js dev resources is blocked by default for safety.
+
+To allow this host in development, add it to "allowedDevOrigins" in next.config.js and restart the dev server:
+
+// next.config.js
+module.exports = {
+  allowedDevOrigins: ['3000-fa3ac68f-0dbd-4395-a44e-fe1a6c86d198.orchids.cloud'],
+}
+
+Read more: https://nextjs.org/docs/app/api-reference/config/next-config-js/allowedDevOrigins
+✓ Compiled in 57ms
+✓ Compiled in 52ms
+✓ Compiled in 54ms
+✓ Compiled in 54ms
+✓ Compiled in 80ms
+ GET /?_cb=1776598936784 200 in 161ms (next.js: 129ms, application-code: 32ms)
+ GET /?_cb=1776598936784 200 in 32ms (next.js: 3ms, application-code: 29ms)
+ GET /api/wallet/balance 500 in 148ms (next.js: 142ms, application-code: 6ms)
+ GET / 200 in 130ms (next.js: 3ms, application-code: 127ms)
