@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { DEMO_PROPOSALS, PROPOSAL_TYPE_META, type Proposal } from "@/lib/proposals";
 import ConfidenceBar from "./ConfidenceBar";
 
@@ -13,9 +13,42 @@ interface ProposalsPanelProps {
   onPropose: (data: PrefillData) => void;
 }
 
+interface AnalyzedProposal extends Proposal {
+  aiInsight?: string;
+}
+
+type AiStatus = "idle" | "analyzing" | "ready" | "error";
+
 export default function ProposalsPanel({ onPropose }: ProposalsPanelProps) {
+  const [proposals, setProposals] = useState<AnalyzedProposal[]>(DEMO_PROPOSALS);
   const [expandedId, setExpandedId] = useState<string | null>(DEMO_PROPOSALS[0].id);
   const [proposedId, setProposedId] = useState<string | null>(null);
+  const [aiStatus, setAiStatus] = useState<AiStatus>("idle");
+  const [aiModel, setAiModel] = useState<string | null>(null);
+  const [aiError, setAiError] = useState<string | null>(null);
+
+  async function loadAnalysis() {
+    setAiStatus("analyzing");
+    setAiError(null);
+    try {
+      const res = await fetch("/api/proposals/analyze", { cache: "no-store" });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || `Request failed (${res.status})`);
+      }
+      setProposals(data.proposals as AnalyzedProposal[]);
+      setAiModel(data.model ?? null);
+      setAiStatus("ready");
+    } catch (err) {
+      setAiError(err instanceof Error ? err.message : "Unknown error");
+      setAiStatus("error");
+    }
+  }
+
+  useEffect(() => {
+    loadAnalysis();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function handlePropose(proposal: Proposal) {
     setProposedId(proposal.id);
@@ -23,28 +56,83 @@ export default function ProposalsPanel({ onPropose }: ProposalsPanelProps) {
       destinationAddress: proposal.destinationAddress,
       amount: proposal.amount,
     });
-    // Scroll to the transfer form smoothly
     document.getElementById("transfer-form")?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
+
+  const statusBadge = (() => {
+    switch (aiStatus) {
+      case "analyzing":
+        return {
+          dot: "bg-cyan-400 animate-pulse",
+          text: "text-cyan-300",
+          border: "border-cyan-700/50",
+          bg: "bg-cyan-950/40",
+          label: "Gemini 3.1 Pro · analyzing…",
+        };
+      case "ready":
+        return {
+          dot: "bg-emerald-400",
+          text: "text-emerald-300",
+          border: "border-emerald-700/50",
+          bg: "bg-emerald-950/40",
+          label: `Analyzed by ${aiModel ?? "Gemini 3.1 Pro"}`,
+        };
+      case "error":
+        return {
+          dot: "bg-rose-400",
+          text: "text-rose-300",
+          border: "border-rose-700/50",
+          bg: "bg-rose-950/40",
+          label: "Gemini analysis unavailable",
+        };
+      default:
+        return {
+          dot: "bg-slate-500",
+          text: "text-slate-400",
+          border: "border-slate-700/50",
+          bg: "bg-slate-900/40",
+          label: "Gemini 3.1 Pro · idle",
+        };
+    }
+  })();
 
   return (
     <div className="rounded-xl border border-slate-700 bg-slate-800/60 p-6">
       {/* Header */}
-      <div className="flex items-start justify-between mb-2">
+      <div className="flex items-start justify-between mb-2 gap-3 flex-wrap">
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <h2 className="text-lg font-semibold text-white">Transaction Proposals</h2>
-            {/* Clearly marked demo badge */}
             <span className="rounded-full border border-amber-600/50 bg-amber-950/40 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest text-amber-400">
               Simulated Demo
             </span>
+            <span
+              className={`flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-widest ${statusBadge.border} ${statusBadge.bg} ${statusBadge.text}`}
+            >
+              <span className={`h-1.5 w-1.5 rounded-full ${statusBadge.dot}`} />
+              {statusBadge.label}
+            </span>
           </div>
           <p className="text-sm text-slate-400 mt-1">
-            AI-generated suggestions based on simulated Arc testnet data.{" "}
+            Suggestions reasoned over by{" "}
+            <span className="text-cyan-300 font-medium">Gemini 3.1 Pro</span>.{" "}
             <span className="text-slate-500">You review and approve every transfer.</span>
           </p>
         </div>
+        <button
+          onClick={loadAnalysis}
+          disabled={aiStatus === "analyzing"}
+          className="shrink-0 rounded-lg border border-slate-700 bg-slate-900/60 px-3 py-1.5 text-xs font-medium text-slate-300 hover:border-cyan-600/60 hover:text-cyan-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {aiStatus === "analyzing" ? "Analyzing…" : "Re-analyze with Gemini"}
+        </button>
       </div>
+
+      {aiStatus === "error" && aiError && (
+        <div className="mb-3 mt-2 rounded-lg border border-rose-800/40 bg-rose-950/30 px-3 py-2 text-xs text-rose-300">
+          Gemini analysis failed: {aiError}
+        </div>
+      )}
 
       {/* Safety notice */}
       <div className="mb-5 mt-3 flex items-start gap-2.5 rounded-lg border border-indigo-800/40 bg-indigo-950/30 px-3 py-2.5">
@@ -65,7 +153,7 @@ export default function ProposalsPanel({ onPropose }: ProposalsPanelProps) {
 
       {/* Proposal list */}
       <div className="space-y-3">
-        {DEMO_PROPOSALS.map((proposal) => {
+        {proposals.map((proposal) => {
           const meta = PROPOSAL_TYPE_META[proposal.type];
           const isExpanded = expandedId === proposal.id;
           const isProposed = proposedId === proposal.id;
@@ -81,12 +169,10 @@ export default function ProposalsPanel({ onPropose }: ProposalsPanelProps) {
                   : "border-slate-700 bg-slate-900/40 hover:border-slate-600"
               }`}
             >
-              {/* Card header — always visible */}
               <button
                 className="w-full text-left px-4 py-3 flex items-center gap-3"
                 onClick={() => setExpandedId(isExpanded ? null : proposal.id)}
               >
-                {/* Type badge */}
                 <span
                   className={`shrink-0 rounded-md border px-2 py-0.5 text-xs font-medium ${meta.bg} ${meta.border} ${meta.color}`}
                 >
@@ -116,7 +202,6 @@ export default function ProposalsPanel({ onPropose }: ProposalsPanelProps) {
                   </div>
                 </div>
 
-                {/* Score pill */}
                 <div
                   className={`shrink-0 text-xs font-bold rounded-full px-2.5 py-1 ${
                     proposal.confidenceScore >= 80
@@ -129,7 +214,6 @@ export default function ProposalsPanel({ onPropose }: ProposalsPanelProps) {
                   {proposal.confidenceScore}%
                 </div>
 
-                {/* Chevron */}
                 <svg
                   className={`h-4 w-4 text-slate-500 transition-transform duration-200 shrink-0 ${
                     isExpanded ? "rotate-180" : ""
@@ -143,16 +227,31 @@ export default function ProposalsPanel({ onPropose }: ProposalsPanelProps) {
                 </svg>
               </button>
 
-              {/* Expanded detail */}
               {isExpanded && (
                 <div className="border-t border-slate-700/60 px-4 pt-4 pb-4 space-y-4">
-                  {/* Rationale */}
                   <p className="text-sm text-slate-400 leading-relaxed">{proposal.rationale}</p>
 
-                  {/* Confidence bar */}
+                  {/* Gemini AI insight */}
+                  <div className="rounded-lg border border-cyan-800/40 bg-cyan-950/20 px-3 py-2.5">
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <svg className="h-3 w-3 text-cyan-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M12 2l2.39 4.84L20 8.27l-4 3.9.95 5.53L12 15.1l-4.95 2.6L8 12.17l-4-3.9 5.61-.43z" />
+                      </svg>
+                      <span className="text-[10px] font-semibold uppercase tracking-widest text-cyan-300">
+                        Gemini 3.1 Pro insight
+                      </span>
+                    </div>
+                    {aiStatus === "analyzing" && !proposal.aiInsight ? (
+                      <p className="text-xs text-cyan-300/70 italic">Analyzing this proposal…</p>
+                    ) : proposal.aiInsight ? (
+                      <p className="text-xs text-cyan-100/90 leading-relaxed">{proposal.aiInsight}</p>
+                    ) : (
+                      <p className="text-xs text-slate-500 italic">No AI insight available yet.</p>
+                    )}
+                  </div>
+
                   <ConfidenceBar score={proposal.confidenceScore} />
 
-                  {/* Detail grid */}
                   <div className="grid grid-cols-2 gap-2 text-xs">
                     {[
                       { label: "Amount", value: `${proposal.amount} USDC` },
@@ -167,7 +266,6 @@ export default function ProposalsPanel({ onPropose }: ProposalsPanelProps) {
                     ))}
                   </div>
 
-                  {/* Propose button */}
                   <button
                     disabled={proposal.isStale}
                     onClick={() => handlePropose(proposal)}
