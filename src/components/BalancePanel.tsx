@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import WalletCard from "./WalletCard";
 import { useWalletSession } from "./WalletSessionProvider";
+import InitializeWalletButton from "./InitializeWalletButton";
 
 interface Wallet {
   id: string;
@@ -121,8 +122,17 @@ export default function BalancePanel({ onWalletSelect, selectedWalletId }: Balan
       )}
 
       {data && !data.error && data.wallets.length === 0 && (
-        <div className="py-10 text-center text-slate-500 text-sm">
-          No wallets found for this user token.
+        <div className="py-6 px-2 space-y-4">
+          <div className="text-center">
+            <p className="text-sm text-slate-300 font-medium">
+              No wallet on Arc Testnet yet
+            </p>
+            <p className="text-xs text-slate-500 mt-1">
+              Provision your first user-controlled wallet. Circle will prompt
+              you to set a PIN — it stays in your browser.
+            </p>
+          </div>
+          <InitializeWalletButton onCreated={fetchBalances} />
         </div>
       )}
 
