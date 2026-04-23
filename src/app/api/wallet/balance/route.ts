@@ -1,21 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCircleClient } from "@/lib/circle";
 import { requireUserToken, sessionErrorResponse } from "@/lib/sessionAuth";
+import { MOCK_USER_TOKEN, MOCK_WALLETS, totalMockUSDC } from "@/lib/mockWallets";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-/**
- * GET /api/wallet/balance
- *
- * Reads the per-session Circle userToken from the request header.
- * No CIRCLE_USER_TOKEN env var is consulted — sessions are minted fresh
- * via /api/wallet/session.
- */
 export async function GET(req: NextRequest) {
   const tokenOrError = requireUserToken(req);
   if (tokenOrError instanceof NextResponse) return tokenOrError;
   const { userToken } = tokenOrError;
+
+  if (userToken === MOCK_USER_TOKEN) {
+    return NextResponse.json({
+      wallets: MOCK_WALLETS,
+      totalUSDC: totalMockUSDC(),
+      mock: true,
+    });
+  }
 
   try {
     const client = getCircleClient();

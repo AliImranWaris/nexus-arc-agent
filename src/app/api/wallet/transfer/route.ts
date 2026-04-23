@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCircleClient } from "@/lib/circle";
 import { requireUserToken, sessionErrorResponse } from "@/lib/sessionAuth";
+import { MOCK_USER_TOKEN } from "@/lib/mockWallets";
 import { v4 as uuidv4 } from "uuid";
 
 export const runtime = "nodejs";
@@ -43,6 +44,16 @@ export async function POST(req: NextRequest) {
         { error: "Amount must be a positive number no greater than 10 USDC." },
         { status: 400 },
       );
+    }
+
+    if (userToken === MOCK_USER_TOKEN) {
+      return NextResponse.json({
+        success: true,
+        challengeId: `mock-challenge-${uuidv4()}`,
+        message:
+          "Mock mode: a real Circle challenge would be created here. Add a valid CIRCLE_API_KEY to enable live signing on Arc Testnet.",
+        mock: true,
+      });
     }
 
     const client = getCircleClient();

@@ -23,6 +23,8 @@ export interface WalletSession {
   issuedAt: string;
   expiresInSeconds: number;
   network: string;
+  mock?: boolean;
+  mockReason?: string;
 }
 
 interface WalletSessionContextValue {
@@ -75,6 +77,8 @@ export function WalletSessionProvider({ children }: { children: ReactNode }) {
         issuedAt: data.issuedAt,
         expiresInSeconds: data.expiresInSeconds,
         network: data.network ?? "Arc Testnet (Circle Sandbox)",
+        mock: Boolean(data.mock),
+        mockReason: data.mockReason,
       };
       sessionRef.current = next;
       setSession(next);

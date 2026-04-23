@@ -15,6 +15,31 @@ function SessionBanner() {
 
   if (status === "ready" && session) {
     const issued = new Date(session.issuedAt);
+    if (session.mock) {
+      return (
+        <div className="rounded-xl border border-amber-700/50 bg-amber-950/20 p-4 flex items-start gap-3">
+          <span className="h-2 w-2 rounded-full bg-amber-400 animate-pulse shrink-0 mt-1.5" />
+          <div className="flex-1 text-sm">
+            <p className="text-amber-200 font-medium">
+              Mock wallet session active (Circle bypass)
+            </p>
+            <p className="text-xs text-amber-400/90 mt-0.5">
+              {session.network} · issued {issued.toLocaleTimeString()}. Showing
+              mock wallets so you can review the UI and Gemini analysis. Reason:{" "}
+              <span className="font-mono text-amber-300/80">
+                {session.mockReason ?? "Circle credentials unavailable"}
+              </span>
+            </p>
+          </div>
+          <button
+            onClick={() => void renew()}
+            className="shrink-0 rounded-lg border border-amber-700/60 bg-amber-950/40 px-3 py-1.5 text-xs font-medium text-amber-300 hover:border-amber-500 hover:text-amber-200 transition-colors"
+          >
+            Retry live session
+          </button>
+        </div>
+      );
+    }
     return (
       <div className="rounded-xl border border-emerald-700/40 bg-emerald-950/20 p-4 flex items-center gap-3">
         <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
