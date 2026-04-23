@@ -13,8 +13,11 @@ interface ProposalsPanelProps {
   onPropose: (data: PrefillData) => void;
 }
 
+type AiSource = "Gemini" | "Llama" | "None";
+
 interface AnalyzedProposal extends Proposal {
   aiInsight?: string;
+  aiSource?: AiSource;
 }
 
 type AiStatus = "idle" | "analyzing" | "ready" | "error";
@@ -24,7 +27,8 @@ export default function ProposalsPanel({ onPropose }: ProposalsPanelProps) {
   const [expandedId, setExpandedId] = useState<string | null>(DEMO_PROPOSALS[0].id);
   const [proposedId, setProposedId] = useState<string | null>(null);
   const [aiStatus, setAiStatus] = useState<AiStatus>("idle");
-  const [aiModel, setAiModel] = useState<string | null>(null);
+  const [primaryModel, setPrimaryModel] = useState<string | null>(null);
+  const [fallbackModel, setFallbackModel] = useState<string | null>(null);
   const [aiError, setAiError] = useState<string | null>(null);
 
   async function loadAnalysis() {
@@ -37,7 +41,8 @@ export default function ProposalsPanel({ onPropose }: ProposalsPanelProps) {
         throw new Error(data.error || `Request failed (${res.status})`);
       }
       setProposals(data.proposals as AnalyzedProposal[]);
-      setAiModel(data.model ?? null);
+      setPrimaryModel(data.primaryModel ?? null);
+      setFallbackModel(data.fallbackModel ?? null);
       setAiStatus("ready");
     } catch (err) {
       setAiError(err instanceof Error ? err.message : "Unknown error");
@@ -67,7 +72,7 @@ export default function ProposalsPanel({ onPropose }: ProposalsPanelProps) {
           text: "text-cyan-300",
           border: "border-cyan-700/50",
           bg: "bg-cyan-950/40",
-          label: "Gemini 3.1 Pro · analyzing…",
+          label: "Hybrid AI · analyzing…",
         };
       case "ready":
         return {
@@ -75,7 +80,7 @@ export default function ProposalsPanel({ onPropose }: ProposalsPanelProps) {
           text: "text-emerald-300",
           border: "border-emerald-700/50",
           bg: "bg-emerald-950/40",
-          label: `Analyzed by ${aiModel ?? "Gemini 3.1 Pro"}`,
+          label: `Hybrid AI · ${primaryModel ?? "Gemini"} → ${fallbackModel?.split("/").pop() ?? "Llama"}`,
         };
       case "error":
         return {
@@ -91,7 +96,7 @@ export default function ProposalsPanel({ onPropose }: ProposalsPanelProps) {
           text: "text-slate-400",
           border: "border-slate-700/50",
           bg: "bg-slate-900/40",
-          label: "Gemini 3.1 Pro · idle",
+          label: "Hybrid AI · idle",
         };
     }
   })();
@@ -115,7 +120,8 @@ export default function ProposalsPanel({ onPropose }: ProposalsPanelProps) {
           </div>
           <p className="text-sm text-slate-400 mt-1">
             Suggestions reasoned over by{" "}
-            <span className="text-cyan-300 font-medium">Gemini 3.1 Pro</span>.{" "}
+            <span className="text-cyan-300 font-medium">Gemini</span>, with{" "}
+            <span className="text-amber-300 font-medium">Llama 3 70B</span> as automatic fallback.{" "}
             <span className="text-slate-500">You review and approve every transfer.</span>
           </p>
         </div>
@@ -124,7 +130,7 @@ export default function ProposalsPanel({ onPropose }: ProposalsPanelProps) {
           disabled={aiStatus === "analyzing"}
           className="shrink-0 rounded-lg border border-slate-700 bg-slate-900/60 px-3 py-1.5 text-xs font-medium text-slate-300 hover:border-cyan-600/60 hover:text-cyan-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {aiStatus === "analyzing" ? "Analyzing…" : "Re-analyze with Gemini"}
+          {aiStatus === "analyzing" ? "Analyzing…" : "Re-analyze"}
         </button>
       </div>
 
@@ -231,24 +237,50 @@ export default function ProposalsPanel({ onPropose }: ProposalsPanelProps) {
                 <div className="border-t border-slate-700/60 px-4 pt-4 pb-4 space-y-4">
                   <p className="text-sm text-slate-400 leading-relaxed">{proposal.rationale}</p>
 
-                  {/* Gemini AI insight */}
-                  <div className="rounded-lg border border-cyan-800/40 bg-cyan-950/20 px-3 py-2.5">
-                    <div className="flex items-center gap-1.5 mb-1">
-                      <svg className="h-3 w-3 text-cyan-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M12 2l2.39 4.84L20 8.27l-4 3.9.95 5.53L12 15.1l-4.95 2.6L8 12.17l-4-3.9 5.61-.43z" />
-                      </svg>
-                      <span className="text-[10px] font-semibold uppercase tracking-widest text-cyan-300">
-                        Gemini 3.1 Pro insight
-                      </span>
-                    </div>
-                    {aiStatus === "analyzing" && !proposal.aiInsight ? (
-                      <p className="text-xs text-cyan-300/70 italic">Analyzing this proposal…</p>
-                    ) : proposal.aiInsight ? (
-                      <p className="text-xs text-cyan-100/90 leading-relaxed">{proposal.aiInsight}</p>
-                    ) : (
-                      <p className="text-xs text-slate-500 italic">No AI insight available yet.</p>
-                    )}
-                  </div>
+                  {/* Hybrid AI insight */}
+                  {(() => {
+                    const source = proposal.aiSource ?? "None";
+                    const isLlama = source === "Llama";
+                    const isGemini = source === "Gemini";
+                    const wrapTone = isGemini
+                      ? "border-cyan-800/40 bg-cyan-950/20"
+                      : isLlama
+                      ? "border-amber-800/40 bg-amber-950/20"
+                      : "border-slate-700/60 bg-slate-900/40";
+                    const labelTone = isGemini
+                      ? "text-cyan-300"
+                      : isLlama
+                      ? "text-amber-300"
+                      : "text-slate-400";
+                    const bodyTone = isGemini
+                      ? "text-cyan-100/90"
+                      : isLlama
+                      ? "text-amber-100/90"
+                      : "text-slate-400";
+
+                    return (
+                      <div className={`rounded-lg border px-3 py-2.5 ${wrapTone}`}>
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <svg className={`h-3 w-3 ${labelTone}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M12 2l2.39 4.84L20 8.27l-4 3.9.95 5.53L12 15.1l-4.95 2.6L8 12.17l-4-3.9 5.61-.43z" />
+                          </svg>
+                          <span className={`text-[10px] font-semibold uppercase tracking-widest ${labelTone}`}>
+                            AI Insight: {source === "None" ? "Unavailable" : source}
+                          </span>
+                          {isLlama && (
+                            <span className="text-[9px] text-amber-400/70 italic">via Featherless fallback</span>
+                          )}
+                        </div>
+                        {aiStatus === "analyzing" && !proposal.aiInsight ? (
+                          <p className="text-xs text-cyan-300/70 italic">Analyzing this proposal…</p>
+                        ) : proposal.aiInsight ? (
+                          <p className={`text-xs leading-relaxed ${bodyTone}`}>{proposal.aiInsight}</p>
+                        ) : (
+                          <p className="text-xs text-slate-500 italic">No AI insight available yet.</p>
+                        )}
+                      </div>
+                    );
+                  })()}
 
                   <ConfidenceBar score={proposal.confidenceScore} />
 
