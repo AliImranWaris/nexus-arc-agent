@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useWalletSession } from "./WalletSessionProvider";
 
 export interface TransferPrefill {
   destinationAddress: string;
@@ -22,6 +23,7 @@ interface TransferResult {
 const PRESET_AMOUNTS = ["0.001", "0.005", "0.01"];
 
 export default function TransferForm({ sourceWalletId, prefill }: TransferFormProps) {
+  const { status: sessionStatus, authedFetch } = useWalletSession();
   const [destination, setDestination] = useState("");
   const [amount, setAmount] = useState("0.01");
   const [loading, setLoading] = useState(false);
@@ -39,7 +41,8 @@ export default function TransferForm({ sourceWalletId, prefill }: TransferFormPr
   }, [prefill]);
 
   const isValidAddress = destination.startsWith("0x") && destination.length === 42;
-  const canSubmit = sourceWalletId && isValidAddress && parseFloat(amount) > 0 && !loading;
+  const sessionReady = sessionStatus === "ready";
+  const canSubmit = sourceWalletId && isValidAddress && parseFloat(amount) > 0 && !loading && sessionReady;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -49,7 +52,7 @@ export default function TransferForm({ sourceWalletId, prefill }: TransferFormPr
     setResult(null);
 
     try {
-      const res = await fetch("/api/wallet/transfer", {
+      const res = await authedFetch("/api/wallet/transfer", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -61,8 +64,9 @@ export default function TransferForm({ sourceWalletId, prefill }: TransferFormPr
       const data: TransferResult = await res.json();
       setResult(data);
       if (data.success) setIsPrefilled(false);
-    } catch {
-      setResult({ error: "Network error. Please try again." });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Network error. Please try again.";
+      setResult({ error: msg });
     } finally {
       setLoading(false);
     }

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import WalletCard from "./WalletCard";
+import { useWalletSession } from "./WalletSessionProvider";
 
 interface Wallet {
   id: string;
@@ -23,27 +24,34 @@ interface BalancePanelProps {
 }
 
 export default function BalancePanel({ onWalletSelect, selectedWalletId }: BalancePanelProps) {
+  const { status: sessionStatus, authedFetch } = useWalletSession();
   const [data, setData] = useState<BalanceData | null>(null);
   const [loading, setLoading] = useState(false);
   const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
 
   const fetchBalances = useCallback(async () => {
+    if (sessionStatus !== "ready") return;
     setLoading(true);
     try {
-      const res = await fetch("/api/wallet/balance");
+      const res = await authedFetch("/api/wallet/balance");
       const json: BalanceData = await res.json();
-      setData(json);
+      if (!res.ok) {
+        setData({ wallets: [], totalUSDC: "0.00", error: json.error || "Failed to fetch balances." });
+      } else {
+        setData(json);
+      }
       setLastRefreshed(new Date());
-    } catch {
-      setData({ wallets: [], totalUSDC: "0.00", error: "Failed to fetch balances." });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to fetch balances.";
+      setData({ wallets: [], totalUSDC: "0.00", error: msg });
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [sessionStatus, authedFetch]);
 
   useEffect(() => {
-    fetchBalances();
-  }, [fetchBalances]);
+    if (sessionStatus === "ready") fetchBalances();
+  }, [sessionStatus, fetchBalances]);
 
   return (
     <div className="rounded-xl border border-slate-700 bg-slate-800/60 p-6">
@@ -107,7 +115,7 @@ export default function BalancePanel({ onWalletSelect, selectedWalletId }: Balan
           <p className="font-medium mb-1">Could not load wallets</p>
           <p className="text-rose-500">{data.error}</p>
           <p className="mt-2 text-xs text-rose-600">
-            Make sure CIRCLE_API_KEY and CIRCLE_USER_TOKEN are set in .env.local
+            Try renewing your wallet session above, or verify CIRCLE_API_KEY in Replit Secrets.
           </p>
         </div>
       )}

@@ -5,8 +5,79 @@ import Link from "next/link";
 import BalancePanel from "@/components/BalancePanel";
 import TransferForm, { type TransferPrefill } from "@/components/TransferForm";
 import ProposalsPanel from "@/components/ProposalsPanel";
+import {
+  WalletSessionProvider,
+  useWalletSession,
+} from "@/components/WalletSessionProvider";
 
-export default function Dashboard() {
+function SessionBanner() {
+  const { status, session, error, renew } = useWalletSession();
+
+  if (status === "ready" && session) {
+    const issued = new Date(session.issuedAt);
+    return (
+      <div className="rounded-xl border border-emerald-700/40 bg-emerald-950/20 p-4 flex items-center gap-3">
+        <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+        <div className="flex-1 text-sm text-emerald-200">
+          <span className="font-medium">Wallet session active</span>
+          <span className="text-emerald-400/80 ml-2 text-xs">
+            on {session.network} · issued {issued.toLocaleTimeString()} · refresh in ~
+            {Math.round(session.expiresInSeconds / 60)} min
+          </span>
+        </div>
+        <button
+          onClick={() => void renew()}
+          className="rounded-lg border border-emerald-700/60 bg-emerald-950/40 px-3 py-1.5 text-xs font-medium text-emerald-300 hover:border-emerald-500 hover:text-emerald-200 transition-colors"
+        >
+          Renew now
+        </button>
+      </div>
+    );
+  }
+
+  if (status === "loading" || status === "idle") {
+    return (
+      <div className="rounded-xl border border-slate-700 bg-slate-900/40 p-4 flex items-center gap-3 text-sm text-slate-400">
+        <svg className="h-4 w-4 animate-spin text-indigo-400" viewBox="0 0 24 24" fill="none">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+        </svg>
+        Establishing wallet session with Circle…
+      </div>
+    );
+  }
+
+  // expired or error
+  const isExpired = status === "expired";
+  return (
+    <div className="rounded-xl border border-amber-700/50 bg-amber-950/20 p-4 flex items-start gap-3">
+      <svg className="h-5 w-5 text-amber-400 shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+        <line x1="12" y1="9" x2="12" y2="13" />
+        <line x1="12" y1="17" x2="12.01" y2="17" />
+      </svg>
+      <div className="flex-1">
+        <p className="text-sm font-medium text-amber-200">
+          {isExpired ? "Session Expired" : "Session unavailable"}
+        </p>
+        <p className="text-xs text-amber-400/90 mt-0.5">
+          {error ??
+            (isExpired
+              ? "Your wallet session token has expired. Generate a new one to continue."
+              : "Could not start a Circle wallet session. Try again, or check that CIRCLE_API_KEY is set.")}
+        </p>
+      </div>
+      <button
+        onClick={() => void renew()}
+        className="shrink-0 rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-semibold text-amber-50 hover:bg-amber-500 transition-colors"
+      >
+        Generate new token
+      </button>
+    </div>
+  );
+}
+
+function DashboardContent() {
   const [selectedWalletId, setSelectedWalletId] = useState<string | null>(null);
   const [transferPrefill, setTransferPrefill] = useState<TransferPrefill | null>(null);
 
@@ -52,24 +123,7 @@ export default function Dashboard() {
 
       {/* Main */}
       <main className="mx-auto max-w-6xl px-6 py-8 space-y-8">
-        {/* Setup banner */}
-        <div className="rounded-xl border border-amber-700/40 bg-amber-950/20 p-4 flex gap-3">
-          <svg className="h-5 w-5 text-amber-400 shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
-            <line x1="12" y1="9" x2="12" y2="13" />
-            <line x1="12" y1="17" x2="12.01" y2="17" />
-          </svg>
-          <p className="text-sm text-amber-500">
-            <span className="font-medium text-amber-300">Setup required — </span>
-            Add{" "}
-            <code className="font-mono text-amber-400">CIRCLE_API_KEY</code>,{" "}
-            <code className="font-mono text-amber-400">CIRCLE_USER_TOKEN</code>, and{" "}
-            <code className="font-mono text-amber-400">CIRCLE_ENCRYPTION_KEY</code>{" "}
-            to <code className="font-mono text-amber-400">.env.local</code>.
-            Get credentials at{" "}
-            <span className="text-amber-400 underline underline-offset-2 cursor-default">console.circle.com</span>.
-          </p>
-        </div>
+        <SessionBanner />
 
         {/* Row 1: Wallets + Transfer */}
         <div className="grid gap-6 lg:grid-cols-2">
@@ -101,5 +155,13 @@ export default function Dashboard() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function Dashboard() {
+  return (
+    <WalletSessionProvider>
+      <DashboardContent />
+    </WalletSessionProvider>
   );
 }

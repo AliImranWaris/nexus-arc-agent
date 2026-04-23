@@ -1,26 +1,24 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getCircleClient } from "@/lib/circle";
+import { requireUserToken, sessionErrorResponse } from "@/lib/sessionAuth";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 /**
  * GET /api/wallet/balance
  *
- * Fetches token balances for the wallets belonging to the user token
- * stored in CIRCLE_USER_TOKEN. In a real app the user token would come
- * from your auth session, not an env var.
+ * Reads the per-session Circle userToken from the request header.
+ * No CIRCLE_USER_TOKEN env var is consulted — sessions are minted fresh
+ * via /api/wallet/session.
  */
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const tokenOrError = requireUserToken(req);
+  if (tokenOrError instanceof NextResponse) return tokenOrError;
+  const { userToken } = tokenOrError;
+
   try {
     const client = getCircleClient();
-    const userToken = process.env.CIRCLE_USER_TOKEN;
-
-    if (!userToken) {
-      return NextResponse.json(
-        { error: "CIRCLE_USER_TOKEN is not configured." },
-        { status: 500 }
-      );
-    }
-
-    // List wallets owned by this user
     const walletsRes = await client.listWallets({ userToken });
     const wallets = walletsRes.data?.wallets ?? [];
 
@@ -28,7 +26,6 @@ export async function GET() {
       return NextResponse.json({ wallets: [], totalUSDC: "0.00" });
     }
 
-    // Fetch token balances for each wallet
     const walletsWithBalances = await Promise.all(
       wallets.map(async (wallet) => {
         const balRes = await client.getWalletTokenBalance({
@@ -46,7 +43,7 @@ export async function GET() {
           usdcBalance,
           allBalances: balances,
         };
-      })
+      }),
     );
 
     const totalUSDC = walletsWithBalances
@@ -55,6 +52,8 @@ export async function GET() {
 
     return NextResponse.json({ wallets: walletsWithBalances, totalUSDC });
   } catch (err: unknown) {
+    const sessionFail = sessionErrorResponse(err);
+    if (sessionFail) return sessionFail;
     const message = err instanceof Error ? err.message : "Unknown error";
     return NextResponse.json({ error: message }, { status: 500 });
   }

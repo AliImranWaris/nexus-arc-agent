@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCircleClient } from "@/lib/circle";
+import { requireUserToken, sessionErrorResponse } from "@/lib/sessionAuth";
 import { v4 as uuidv4 } from "uuid";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 export interface TransferRequestBody {
   sourceWalletId: string;
@@ -12,12 +16,16 @@ export interface TransferRequestBody {
 /**
  * POST /api/wallet/transfer
  *
- * Initiates a USDC transfer on the testnet.
- * The Circle SDK returns a challenge ID — the client must pass this to
- * Circle's Web3 Services PIN/biometric flow before the transaction settles.
- * This keeps the private key exclusively in the user's device (self-custody).
+ * Initiates a USDC transfer on Arc Testnet (auto-selected via the
+ * TEST_API_KEY prefix on CIRCLE_API_KEY). The Circle SDK returns a
+ * challengeId — the client must complete it via Circle's PIN/biometric
+ * flow before settlement. No private key ever leaves the user's device.
  */
 export async function POST(req: NextRequest) {
+  const tokenOrError = requireUserToken(req);
+  if (tokenOrError instanceof NextResponse) return tokenOrError;
+  const { userToken } = tokenOrError;
+
   try {
     const body: TransferRequestBody = await req.json();
     const { sourceWalletId, destinationAddress, amount } = body;
@@ -25,7 +33,7 @@ export async function POST(req: NextRequest) {
     if (!sourceWalletId || !destinationAddress || !amount) {
       return NextResponse.json(
         { error: "sourceWalletId, destinationAddress, and amount are required." },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -33,27 +41,18 @@ export async function POST(req: NextRequest) {
     if (isNaN(parsedAmount) || parsedAmount <= 0 || parsedAmount > 10) {
       return NextResponse.json(
         { error: "Amount must be a positive number no greater than 10 USDC." },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     const client = getCircleClient();
-    const userToken = process.env.CIRCLE_USER_TOKEN;
-    const encryptionKey = process.env.CIRCLE_ENCRYPTION_KEY;
-
-    if (!userToken || !encryptionKey) {
-      return NextResponse.json(
-        { error: "Server wallet credentials are not configured." },
-        { status: 500 }
-      );
-    }
 
     const transferRes = await client.createTransaction({
       userToken,
       idempotencyKey: uuidv4(),
       walletId: sourceWalletId,
       destinationAddress,
-      // USDC token contract address on the testnet
+      // USDC token contract id on Arc Testnet (Circle Sandbox)
       tokenId: "5797fbd6-3795-519d-84ca-ec4c5f80c3b1",
       amounts: [amount],
       fee: {
@@ -70,9 +69,11 @@ export async function POST(req: NextRequest) {
       success: true,
       challengeId,
       message:
-        "Challenge created. Complete the PIN/biometric step in your wallet app to authorise and settle this transaction.",
+        "Challenge created. Complete the PIN/biometric step in your wallet app to authorise and settle this transaction on Arc Testnet.",
     });
   } catch (err: unknown) {
+    const sessionFail = sessionErrorResponse(err);
+    if (sessionFail) return sessionFail;
     const message = err instanceof Error ? err.message : "Unknown error";
     return NextResponse.json({ error: message }, { status: 500 });
   }
