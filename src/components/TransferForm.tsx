@@ -19,6 +19,20 @@ interface TransferResult {
   message?: string;
   error?: string;
   signed?: boolean;
+  demoFallback?: boolean;
+  reason?: string;
+}
+
+function isDemoModeActive(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    const raw = window.localStorage.getItem("nexusarc.demoBalances");
+    if (!raw) return false;
+    const obj = JSON.parse(raw);
+    return obj && typeof obj === "object" && Object.keys(obj).length > 0;
+  } catch {
+    return false;
+  }
 }
 
 const PRESET_AMOUNTS = ["0.001", "0.005", "0.01"];
@@ -115,7 +129,10 @@ export default function TransferForm({ sourceWalletId, prefill }: TransferFormPr
     try {
       const res = await authedFetch("/api/wallet/transfer", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(isDemoModeActive() ? { "x-nexusarc-demo": "1" } : {}),
+        },
         body: JSON.stringify({
           sourceWalletId,
           destinationAddress: destination,
@@ -311,6 +328,11 @@ export default function TransferForm({ sourceWalletId, prefill }: TransferFormPr
                 <p className="font-semibold text-emerald-200">Challenge Created — Awaiting User Signature</p>
               </div>
               <p className="text-emerald-400">{result.message}</p>
+              {result.demoFallback && result.reason && (
+                <p className="mt-1 text-[11px] text-amber-300/90">
+                  <span className="font-semibold">Demo path:</span> {result.reason}
+                </p>
+              )}
               {result.challengeId && (
                 <div className="mt-2 rounded border border-emerald-800 bg-emerald-950/60 p-2">
                   <p className="text-xs text-emerald-500 mb-1">Circle Challenge ID</p>

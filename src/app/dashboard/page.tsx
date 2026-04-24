@@ -32,14 +32,14 @@ function ResetForJudgesButton() {
       onClick={onClick}
       disabled={busy}
       title="Clear local userId, demo balances, and start a fresh Circle session"
-      className="flex items-center gap-1.5 rounded-full border border-rose-700/50 bg-rose-950/30 px-2.5 py-1 text-[11px] font-medium text-rose-300 hover:border-rose-500 hover:text-rose-200 transition-colors disabled:opacity-50"
+      className="flex items-center gap-1 rounded-full border border-rose-700/50 bg-rose-950/30 px-2 py-0.5 text-[10px] font-medium text-rose-300 hover:border-rose-500 hover:text-rose-200 transition-colors disabled:opacity-50"
     >
-      <svg className={`h-3 w-3 ${busy ? "animate-spin" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <svg className={`h-2.5 w-2.5 ${busy ? "animate-spin" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
         <path d="M23 4v6h-6" />
         <path d="M1 20v-6h6" />
         <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15" />
       </svg>
-      {busy ? "Resetting…" : "Reset for Judges"}
+      {busy ? "Resetting…" : "Reset"}
     </button>
   );
 }
@@ -171,13 +171,13 @@ function DashboardContent() {
               <p className="text-xs text-slate-500">Circle Programmable Wallets · Arc Testnet</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             <DemoModeToggle walletIds={walletsForTools.map((w) => w.id)} />
             <ResetForJudgesButton />
-            <span className="hidden lg:flex items-center gap-1.5 rounded-full border border-slate-700 bg-slate-900/60 px-3 py-1 text-xs text-slate-400">
-              User-controlled · Self-custody
+            <span className="hidden xl:flex items-center gap-1.5 rounded-full border border-slate-700 bg-slate-900/60 px-2.5 py-0.5 text-[10px] text-slate-400">
+              Self-custody
             </span>
-            <span className="flex items-center gap-1.5 rounded-full border border-emerald-700/50 bg-emerald-950/40 px-3 py-1 text-xs text-emerald-400">
+            <span className="flex items-center gap-1.5 rounded-full border border-emerald-700/50 bg-emerald-950/40 px-2.5 py-0.5 text-[10px] text-emerald-400">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
               Testnet
             </span>

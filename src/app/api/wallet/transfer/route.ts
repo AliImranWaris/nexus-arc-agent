@@ -71,25 +71,62 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Resolve the USDC tokenId on the wallet's own chain
-    const balRes = await client.getWalletTokenBalance({
-      userToken,
-      walletId: sourceWalletId,
-    });
-    const usdcEntry = (balRes.data?.tokenBalances ?? []).find(
-      (b) => b.token?.symbol === "USDC",
-    );
-    const usdcTokenId = usdcEntry?.token?.id;
+    const demoMode = req.headers.get("x-nexusarc-demo") === "1";
 
-    if (!usdcTokenId) {
-      return NextResponse.json(
-        {
-          error: `No USDC token found for wallet ${sourceWalletId} on ${wallet.blockchain}. Fund the wallet with testnet USDC before transferring.`,
-        },
-        { status: 400 },
+    // Try to discover the USDC tokenId from the wallet's own balances.
+    // Brand-new wallets with no on-chain history return an empty list.
+    let usdcTokenId: string | undefined;
+    try {
+      const balRes = await client.getWalletTokenBalance({
+        userToken,
+        walletId: sourceWalletId,
+      });
+      const usdcEntry = (balRes.data?.tokenBalances ?? []).find(
+        (b) => b.token?.symbol === "USDC",
       );
+      usdcTokenId = usdcEntry?.token?.id;
+    } catch {
+      // Swallow — we'll fall back to the signMessage path below
     }
 
+    // ── Demo / unfunded-wallet path ───────────────────────────────────────
+    // If demo mode is enabled OR the wallet has no USDC entry yet, fall
+    // back to a real EIP-191 signMessage challenge. This produces a
+    // genuine Circle challengeId that opens the genuine PIN modal — the
+    // user signs an authorisation message rather than moving on-chain
+    // funds. Perfect for demos / videos where the wallet is empty.
+    if (demoMode || !usdcTokenId) {
+      const memo = `NexusArc transfer demo · ${wallet.blockchain}`;
+      const message =
+        `NexusArc demo authorisation\n` +
+        `From wallet: ${sourceWalletId}\n` +
+        `To: ${destinationAddress}\n` +
+        `Amount: ${amount} USDC\n` +
+        `Chain: ${wallet.blockchain}\n` +
+        `Issued: ${new Date().toISOString()}`;
+
+      const sigRes = await client.signMessage({
+        userToken,
+        walletId: sourceWalletId,
+        message,
+        memo,
+        encodedByHex: false,
+      });
+
+      const challengeId = sigRes.data?.challengeId;
+      return NextResponse.json({
+        success: true,
+        challengeId,
+        blockchain: wallet.blockchain,
+        demoFallback: true,
+        reason: usdcTokenId
+          ? "Demo mode active — signing an authorisation message instead of moving on-chain funds."
+          : "Wallet has no USDC balance yet — signing an authorisation message so the PIN flow can be demonstrated end-to-end.",
+        message: `Challenge created on ${wallet.blockchain}. Enter your PIN in the Circle popup to sign the authorisation.`,
+      });
+    }
+
+    // ── Real on-chain transfer ────────────────────────────────────────────
     const transferRes = await client.createTransaction({
       userToken,
       idempotencyKey: uuidv4(),

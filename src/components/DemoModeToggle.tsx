@@ -55,16 +55,16 @@ export default function DemoModeToggle({ walletIds }: DemoModeToggleProps) {
   };
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-1.5">
       <a
         href="https://faucet.circle.com/"
         target="_blank"
         rel="noopener noreferrer"
-        className="hidden sm:flex items-center gap-1 rounded-full border border-slate-700 bg-slate-900/60 px-2.5 py-1 text-[11px] text-slate-400 hover:border-slate-500 hover:text-slate-200 transition-colors"
+        className="hidden sm:flex items-center gap-1 rounded-full border border-slate-700/80 bg-slate-900/60 px-2 py-0.5 text-[10px] text-slate-400 hover:border-slate-500 hover:text-slate-200 transition-colors"
         title="Open Circle's hosted faucet in a new tab"
       >
         Faucet
-        <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <svg className="h-2.5 w-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M7 17L17 7M17 7H8M17 7V16" />
         </svg>
       </a>
@@ -78,10 +78,10 @@ export default function DemoModeToggle({ walletIds }: DemoModeToggleProps) {
               ? "Click to turn demo mode off"
               : `Click to set every wallet to ${DEMO_AMOUNT} USDC for recording`
         }
-        className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+        className={`flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
           isOn
             ? "border border-amber-600/60 bg-amber-900/40 text-amber-200 hover:bg-amber-900/60"
-            : "border border-slate-700 bg-slate-900/60 text-slate-400 hover:border-slate-500 hover:text-slate-200"
+            : "border border-slate-700/80 bg-slate-900/60 text-slate-400 hover:border-slate-500 hover:text-slate-200"
         }`}
       >
         <span
@@ -89,8 +89,7 @@ export default function DemoModeToggle({ walletIds }: DemoModeToggleProps) {
             isOn ? "bg-amber-400 animate-pulse" : "bg-slate-600"
           }`}
         />
-        Demo Mode {isOn ? `· ${DEMO_AMOUNT} USDC` : "Off"}
-
+        Demo {isOn ? `· ${DEMO_AMOUNT}` : "Off"}
       </button>
     </div>
   );
