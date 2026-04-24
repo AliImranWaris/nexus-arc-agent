@@ -5,6 +5,7 @@ import Link from "next/link";
 import BalancePanel from "@/components/BalancePanel";
 import TransferForm, { type TransferPrefill } from "@/components/TransferForm";
 import ProposalsPanel from "@/components/ProposalsPanel";
+import DemoBalanceTools from "@/components/DemoBalanceTools";
 import {
   WalletSessionProvider,
   useWalletSession,
@@ -105,6 +106,9 @@ function SessionBanner() {
 function DashboardContent() {
   const [selectedWalletId, setSelectedWalletId] = useState<string | null>(null);
   const [transferPrefill, setTransferPrefill] = useState<TransferPrefill | null>(null);
+  const [walletsForTools, setWalletsForTools] = useState<
+    Array<{ id: string; address: string; blockchain: string }>
+  >([]);
 
   return (
     <div className="min-h-screen bg-slate-950 text-white">
@@ -155,12 +159,16 @@ function DashboardContent() {
           <BalancePanel
             onWalletSelect={setSelectedWalletId}
             selectedWalletId={selectedWalletId}
+            onWalletsChange={setWalletsForTools}
           />
           <TransferForm
             sourceWalletId={selectedWalletId}
             prefill={transferPrefill}
           />
         </div>
+
+        {/* Dev tools: demo balance overrides */}
+        <DemoBalanceTools wallets={walletsForTools} />
 
         {/* Row 2: Proposals — full width */}
         <ProposalsPanel onPropose={setTransferPrefill} />

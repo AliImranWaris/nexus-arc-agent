@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import WalletCard from "./WalletCard";
 import { useWalletSession } from "./WalletSessionProvider";
 import InitializeWalletButton from "./InitializeWalletButton";
+import { useDemoBalances } from "@/lib/demoBalances";
 
 interface Wallet {
   id: string;
@@ -22,13 +23,27 @@ interface BalanceData {
 interface BalancePanelProps {
   onWalletSelect: (walletId: string) => void;
   selectedWalletId: string | null;
+  onWalletsChange?: (wallets: Array<{ id: string; address: string; blockchain: string }>) => void;
 }
 
-export default function BalancePanel({ onWalletSelect, selectedWalletId }: BalancePanelProps) {
+export default function BalancePanel({ onWalletSelect, selectedWalletId, onWalletsChange }: BalancePanelProps) {
   const { status: sessionStatus, authedFetch } = useWalletSession();
   const [data, setData] = useState<BalanceData | null>(null);
   const [loading, setLoading] = useState(false);
   const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
+  const demoBalances = useDemoBalances();
+
+  const displayWallets = (data?.wallets ?? []).map((w) => {
+    const override = demoBalances[w.id];
+    return override
+      ? { ...w, usdcBalance: override, _demo: true as const }
+      : { ...w, _demo: false as const };
+  });
+
+  const displayTotal = displayWallets
+    .reduce((sum, w) => sum + (parseFloat(w.usdcBalance) || 0), 0)
+    .toFixed(2);
+  const hasAnyDemo = displayWallets.some((w) => w._demo);
 
   const fetchBalances = useCallback(async () => {
     if (sessionStatus !== "ready") return;
@@ -38,17 +53,26 @@ export default function BalancePanel({ onWalletSelect, selectedWalletId }: Balan
       const json: BalanceData = await res.json();
       if (!res.ok) {
         setData({ wallets: [], totalUSDC: "0.00", error: json.error || "Failed to fetch balances." });
+        onWalletsChange?.([]);
       } else {
         setData(json);
+        onWalletsChange?.(
+          (json.wallets ?? []).map((w) => ({
+            id: w.id,
+            address: w.address,
+            blockchain: w.blockchain,
+          })),
+        );
       }
       setLastRefreshed(new Date());
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Failed to fetch balances.";
       setData({ wallets: [], totalUSDC: "0.00", error: msg });
+      onWalletsChange?.([]);
     } finally {
       setLoading(false);
     }
-  }, [sessionStatus, authedFetch]);
+  }, [sessionStatus, authedFetch, onWalletsChange]);
 
   useEffect(() => {
     if (sessionStatus === "ready") fetchBalances();
@@ -89,12 +113,19 @@ export default function BalancePanel({ onWalletSelect, selectedWalletId }: Balan
       {/* Total balance summary */}
       {data && !data.error && (
         <div className="mb-5 rounded-lg bg-gradient-to-r from-indigo-950/80 to-slate-900/80 border border-indigo-800/40 p-4">
-          <p className="text-xs text-slate-400 uppercase tracking-wider mb-1">Total Balance</p>
+          <div className="flex items-center justify-between mb-1">
+            <p className="text-xs text-slate-400 uppercase tracking-wider">Total Balance</p>
+            {hasAnyDemo && (
+              <span className="rounded-full bg-amber-900/40 border border-amber-700/50 px-2 py-0.5 text-[10px] font-medium text-amber-300 uppercase tracking-wider">
+                Demo override
+              </span>
+            )}
+          </div>
           <p className="text-4xl font-bold text-white">
-            {data.totalUSDC}
+            {displayTotal}
             <span className="text-lg text-slate-400 ml-2 font-normal">USDC</span>
           </p>
-          <p className="text-xs text-slate-500 mt-1">{data.wallets.length} wallet{data.wallets.length !== 1 ? "s" : ""} on testnet</p>
+          <p className="text-xs text-slate-500 mt-1">{displayWallets.length} wallet{displayWallets.length !== 1 ? "s" : ""} on testnet</p>
         </div>
       )}
 
@@ -136,12 +167,13 @@ export default function BalancePanel({ onWalletSelect, selectedWalletId }: Balan
         </div>
       )}
 
-      {data && !data.error && data.wallets.length > 0 && (
+      {data && !data.error && displayWallets.length > 0 && (
         <div className="space-y-3">
-          {data.wallets.map((wallet) => (
+          {displayWallets.map((wallet) => (
             <WalletCard
               key={wallet.id}
               wallet={wallet}
+              demo={wallet._demo}
               selected={selectedWalletId === wallet.id}
               onSelect={onWalletSelect}
               onFunded={fetchBalances}

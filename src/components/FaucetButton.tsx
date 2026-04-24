@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useWalletSession } from "./WalletSessionProvider";
+import { setDemoBalance } from "@/lib/demoBalances";
 
 interface FaucetButtonProps {
   walletId: string;
@@ -9,7 +10,13 @@ interface FaucetButtonProps {
   onFunded: () => void;
 }
 
-type FaucetState = "idle" | "requesting" | "success" | "error";
+type FaucetState = "idle" | "requesting" | "success" | "error" | "external";
+
+interface ExternalFallback {
+  url: string;
+  address: string;
+  blockchain: string;
+}
 
 export default function FaucetButton({
   walletId,
@@ -19,11 +26,13 @@ export default function FaucetButton({
   const { authedFetch } = useWalletSession();
   const [state, setState] = useState<FaucetState>("idle");
   const [message, setMessage] = useState<string | null>(null);
+  const [external, setExternal] = useState<ExternalFallback | null>(null);
 
   const requestDrip = async (e: React.MouseEvent) => {
     e.stopPropagation();
     setState("requesting");
     setMessage(null);
+    setExternal(null);
     try {
       const res = await authedFetch("/api/wallet/faucet", {
         method: "POST",
@@ -36,12 +45,24 @@ export default function FaucetButton({
         }),
       });
       const data = await res.json();
+
+      if (data?.requiresExternalFaucet) {
+        setState("external");
+        setMessage(data.message ?? "API faucet unavailable. Use the Circle Faucet below.");
+        setExternal({
+          url: data.externalFaucetUrl,
+          address: data.address,
+          blockchain: data.blockchain,
+        });
+        return;
+      }
+
       if (!res.ok || data.error) {
         throw new Error(data.error || "Faucet request failed.");
       }
+
       setState("success");
       setMessage(data.message || "Drip requested. Funds usually arrive in ~30s.");
-      // Give the chain a beat, then refresh balances
       setTimeout(() => onFunded(), 4000);
       setTimeout(() => onFunded(), 15000);
     } catch (err) {
@@ -51,12 +72,27 @@ export default function FaucetButton({
     }
   };
 
+  const applyDemoBalance = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setDemoBalance(walletId, "10.00");
+    onFunded();
+  };
+
+  const copyAddress = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (external?.address) {
+      void navigator.clipboard.writeText(external.address);
+    }
+  };
+
   const label = (() => {
     switch (state) {
       case "requesting":
         return "Requesting…";
       case "success":
         return "Dripped ✓";
+      case "external":
+        return "Faucet unavailable";
       case "error":
         return "Retry faucet";
       default:
@@ -73,14 +109,55 @@ export default function FaucetButton({
       >
         {label}
       </button>
+
       {message && (
         <p
           className={`text-[11px] leading-relaxed ${
-            state === "error" ? "text-rose-400" : "text-emerald-400"
+            state === "error"
+              ? "text-rose-400"
+              : state === "external"
+                ? "text-amber-400"
+                : "text-emerald-400"
           }`}
         >
           {message}
         </p>
+      )}
+
+      {state === "external" && external && (
+        <div
+          className="rounded-md border border-amber-700/40 bg-amber-950/20 p-2 space-y-1.5"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-center gap-1.5">
+            <a
+              href={external.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1 rounded-md border border-amber-700/60 bg-amber-950/40 px-2 py-1.5 text-center text-[11px] font-semibold text-amber-200 hover:border-amber-500 hover:bg-amber-900/40 transition-colors"
+              onClick={(e) => e.stopPropagation()}
+            >
+              Open Circle Faucet ↗
+            </a>
+            <button
+              onClick={copyAddress}
+              className="rounded-md border border-slate-700 bg-slate-900/60 px-2 py-1.5 text-[11px] text-slate-300 hover:border-slate-500"
+              title="Copy address"
+            >
+              Copy addr
+            </button>
+          </div>
+          <button
+            onClick={applyDemoBalance}
+            className="w-full rounded-md border border-indigo-700/60 bg-indigo-950/40 px-2 py-1.5 text-[11px] font-semibold text-indigo-200 hover:border-indigo-500 hover:bg-indigo-900/40 transition-colors"
+          >
+            Apply demo balance (10.00 USDC)
+          </button>
+          <p className="text-[10px] text-amber-500/80 leading-snug">
+            Demo balance is display-only — it lets you record the Review &amp; Send
+            flow but won&apos;t settle on-chain.
+          </p>
+        </div>
       )}
     </div>
   );

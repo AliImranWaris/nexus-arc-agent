@@ -15,9 +15,10 @@ interface WalletCardProps {
   selected: boolean;
   onSelect: (id: string) => void;
   onFunded?: () => void;
+  demo?: boolean;
 }
 
-export default function WalletCard({ wallet, selected, onSelect, onFunded }: WalletCardProps) {
+export default function WalletCard({ wallet, selected, onSelect, onFunded, demo }: WalletCardProps) {
   const shortAddress = `${wallet.address.slice(0, 6)}...${wallet.address.slice(-4)}`;
 
   return (
@@ -51,6 +52,11 @@ export default function WalletCard({ wallet, selected, onSelect, onFunded }: Wal
         <div className="text-right shrink-0">
           <p className="text-2xl font-bold text-white">{wallet.usdcBalance}</p>
           <p className="text-xs text-slate-400 mt-0.5">USDC</p>
+          {demo && (
+            <span className="mt-1 inline-block rounded-full bg-amber-900/40 border border-amber-700/50 px-1.5 py-0.5 text-[9px] font-semibold text-amber-300 uppercase tracking-wider">
+              Demo
+            </span>
+          )}
         </div>
       </div>
       {selected && (
