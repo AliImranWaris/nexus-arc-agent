@@ -6,6 +6,7 @@ import BalancePanel from "@/components/BalancePanel";
 import TransferForm, { type TransferPrefill } from "@/components/TransferForm";
 import ProposalsPanel from "@/components/ProposalsPanel";
 import DemoBalanceTools from "@/components/DemoBalanceTools";
+import DemoModeToggle from "@/components/DemoModeToggle";
 import {
   WalletSessionProvider,
   useWalletSession,
@@ -139,7 +140,8 @@ function DashboardContent() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <span className="hidden sm:flex items-center gap-1.5 rounded-full border border-slate-700 bg-slate-900/60 px-3 py-1 text-xs text-slate-400">
+            <DemoModeToggle walletIds={walletsForTools.map((w) => w.id)} />
+            <span className="hidden md:flex items-center gap-1.5 rounded-full border border-slate-700 bg-slate-900/60 px-3 py-1 text-xs text-slate-400">
               User-controlled · Self-custody
             </span>
             <span className="flex items-center gap-1.5 rounded-full border border-emerald-700/50 bg-emerald-950/40 px-3 py-1 text-xs text-emerald-400">

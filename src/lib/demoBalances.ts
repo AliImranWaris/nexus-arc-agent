@@ -49,6 +49,21 @@ export function clearAllDemoBalances() {
   write({});
 }
 
+/**
+ * Sets the same demo balance for every wallet id in one shot.
+ * Useful for a "Demo Mode ON" master toggle.
+ */
+export function setAllDemoBalances(walletIds: string[], amount: string) {
+  const next: DemoBalances = {};
+  const fixed = isNaN(parseFloat(amount))
+    ? "10.00"
+    : parseFloat(amount).toFixed(2);
+  walletIds.forEach((id) => {
+    next[id] = fixed;
+  });
+  write(next);
+}
+
 export function subscribeDemoBalances(cb: () => void): () => void {
   if (typeof window === "undefined") return () => {};
   const handler = () => cb();
