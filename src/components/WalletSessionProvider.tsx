@@ -32,6 +32,8 @@ interface WalletSessionContextValue {
   status: SessionStatus;
   error: string | null;
   renew: () => Promise<void>;
+  /** Clears local userId + session and starts a fresh session, mimicking Incognito. */
+  reset: () => Promise<void>;
   /** Wraps fetch to attach the session token & auto-mark expired on 401. */
   authedFetch: (input: RequestInfo, init?: RequestInit) => Promise<Response>;
 }
@@ -96,6 +98,21 @@ export function WalletSessionProvider({ children }: { children: ReactNode }) {
     void renew();
   }, [renew]);
 
+  const reset = useCallback(async () => {
+    if (typeof window !== "undefined") {
+      // Wipe everything we own so the next session is brand new
+      window.localStorage.removeItem(USER_ID_STORAGE_KEY);
+      window.localStorage.removeItem("nexusarc.demoBalances");
+      window.localStorage.removeItem("nexusarc.demoModeAutoApplied");
+      window.dispatchEvent(new CustomEvent("nexusarc:demo-balances-changed"));
+    }
+    sessionRef.current = null;
+    setSession(null);
+    setStatus("idle");
+    setError(null);
+    await renew();
+  }, [renew]);
+
   const authedFetch = useCallback<WalletSessionContextValue["authedFetch"]>(
     async (input, init = {}) => {
       const current = sessionRef.current;
@@ -127,8 +144,8 @@ export function WalletSessionProvider({ children }: { children: ReactNode }) {
   );
 
   const value = useMemo<WalletSessionContextValue>(
-    () => ({ session, status, error, renew, authedFetch }),
-    [session, status, error, renew, authedFetch],
+    () => ({ session, status, error, renew, reset, authedFetch }),
+    [session, status, error, renew, reset, authedFetch],
   );
 
   return (

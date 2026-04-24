@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useWalletSession } from "./WalletSessionProvider";
 
 export interface TransferPrefill {
@@ -18,19 +18,21 @@ interface TransferResult {
   challengeId?: string;
   message?: string;
   error?: string;
+  signed?: boolean;
 }
 
 const PRESET_AMOUNTS = ["0.001", "0.005", "0.01"];
+const APP_ID = process.env.NEXT_PUBLIC_CIRCLE_APP_ID ?? "";
 
 export default function TransferForm({ sourceWalletId, prefill }: TransferFormProps) {
-  const { status: sessionStatus, authedFetch } = useWalletSession();
+  const { session, status: sessionStatus, authedFetch } = useWalletSession();
   const [destination, setDestination] = useState("");
   const [amount, setAmount] = useState("0.01");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<TransferResult | null>(null);
   const [isPrefilled, setIsPrefilled] = useState(false);
+  const sdkRef = useRef<unknown>(null);
 
-  // Apply pre-fill whenever the proposal selection changes
   useEffect(() => {
     if (prefill) {
       setDestination(prefill.destinationAddress);
@@ -42,11 +44,70 @@ export default function TransferForm({ sourceWalletId, prefill }: TransferFormPr
 
   const isValidAddress = destination.startsWith("0x") && destination.length === 42;
   const sessionReady = sessionStatus === "ready";
-  const canSubmit = sourceWalletId && isValidAddress && parseFloat(amount) > 0 && !loading && sessionReady;
+  // Per demo requirements: keep Submit always enabled (only block on loading).
+  const canSubmit = !loading;
+
+  async function openPinChallenge(challengeId: string) {
+    if (!session || session.mock) return;
+    if (!APP_ID) return;
+    try {
+      const mod = await import("@circle-fin/w3s-pw-web-sdk");
+      const W3SSdk = (mod as { W3SSdk: new (...args: unknown[]) => unknown }).W3SSdk;
+      if (!sdkRef.current) sdkRef.current = new W3SSdk();
+      const sdk = sdkRef.current as {
+        setAppSettings: (s: { appId: string }) => void;
+        setAuthentication: (a: { userToken: string; encryptionKey: string }) => void;
+        execute: (
+          challengeId: string,
+          cb: (err: unknown, r?: { type?: string; status?: string }) => void,
+        ) => void;
+      };
+      sdk.setAppSettings({ appId: APP_ID });
+      sdk.setAuthentication({
+        userToken: session.userToken,
+        encryptionKey: session.encryptionKey,
+      });
+      sdk.execute(challengeId, (err, r) => {
+        if (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          setResult((prev) => ({ ...(prev ?? {}), error: `PIN challenge: ${msg}` }));
+          return;
+        }
+        if (r?.status === "COMPLETE") {
+          setResult((prev) => ({
+            ...(prev ?? {}),
+            signed: true,
+            message: "Signed and submitted on Arc Testnet. Check Circle console for confirmation.",
+          }));
+        }
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to open PIN modal.";
+      setResult((prev) => ({ ...(prev ?? {}), error: msg }));
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!canSubmit) return;
+    if (loading) return;
+
+    // Friendly inline guards (don't disable the button — just don't fire the API)
+    if (!sourceWalletId) {
+      setResult({ error: "Pick a source wallet from the Wallets panel." });
+      return;
+    }
+    if (!isValidAddress) {
+      setResult({ error: "Enter a valid EVM address (0x + 40 hex chars)." });
+      return;
+    }
+    if (!(parseFloat(amount) > 0)) {
+      setResult({ error: "Amount must be greater than zero." });
+      return;
+    }
+    if (!sessionReady) {
+      setResult({ error: "Wallet session not ready yet. Wait a moment and retry." });
+      return;
+    }
 
     setLoading(true);
     setResult(null);
@@ -63,7 +124,13 @@ export default function TransferForm({ sourceWalletId, prefill }: TransferFormPr
       });
       const data: TransferResult = await res.json();
       setResult(data);
-      if (data.success) setIsPrefilled(false);
+      if (data.success) {
+        setIsPrefilled(false);
+        if (data.challengeId) {
+          // Auto-open Circle's PIN challenge modal so the user can sign immediately
+          void openPinChallenge(data.challengeId);
+        }
+      }
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Network error. Please try again.";
       setResult({ error: msg });
@@ -196,7 +263,8 @@ export default function TransferForm({ sourceWalletId, prefill }: TransferFormPr
           />
         </div>
 
-        {/* Submit */}
+        {/* Submit — kept always enabled for the demo so judges can see the
+            PIN challenge modal regardless of on-chain balance. */}
         <button
           type="submit"
           disabled={!canSubmit}
@@ -247,6 +315,16 @@ export default function TransferForm({ sourceWalletId, prefill }: TransferFormPr
                 <div className="mt-2 rounded border border-emerald-800 bg-emerald-950/60 p-2">
                   <p className="text-xs text-emerald-500 mb-1">Circle Challenge ID</p>
                   <p className="font-mono text-xs text-emerald-300 break-all">{result.challengeId}</p>
+                  {!result.signed && (
+                    <p className="mt-2 text-[11px] text-emerald-400/80">
+                      Enter your PIN in the Circle popup to authorise.
+                    </p>
+                  )}
+                  {result.signed && (
+                    <p className="mt-2 text-[11px] text-emerald-300 font-semibold">
+                      ✓ Signed
+                    </p>
+                  )}
                 </div>
               )}
             </div>

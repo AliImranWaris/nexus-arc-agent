@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import {
   clearAllDemoBalances,
   setAllDemoBalances,
@@ -10,16 +11,42 @@ interface DemoModeToggleProps {
   walletIds: string[];
 }
 
-const DEMO_AMOUNT = "10.00";
+const DEMO_AMOUNT = "10.50";
+const AUTO_FLAG = "nexusarc.demoModeAutoApplied";
 
 export default function DemoModeToggle({ walletIds }: DemoModeToggleProps) {
   const overrides = useDemoBalances();
-  // Demo mode = every wallet has an override AND it equals 10.00
+  const autoAppliedRef = useRef(false);
+
+  // Demo mode = every wallet has an override AND it equals the demo amount
   const isOn =
     walletIds.length > 0 &&
     walletIds.every((id) => overrides[id] === DEMO_AMOUNT);
 
+  // Auto-enable demo mode the first time a wallet appears (so judges see
+  // a non-zero balance instantly). We honour an explicit "off" by writing
+  // the auto flag, so subsequent loads don't re-enable.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (autoAppliedRef.current) return;
+    if (walletIds.length === 0) return;
+
+    const everApplied = window.localStorage.getItem(AUTO_FLAG) === "1";
+    const anyOverride = Object.keys(overrides).length > 0;
+
+    if (!everApplied && !anyOverride) {
+      setAllDemoBalances(walletIds, DEMO_AMOUNT);
+      window.localStorage.setItem(AUTO_FLAG, "1");
+      autoAppliedRef.current = true;
+    } else {
+      autoAppliedRef.current = true;
+    }
+  }, [walletIds, overrides]);
+
   const toggle = () => {
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(AUTO_FLAG, "1");
+    }
     if (isOn) {
       clearAllDemoBalances();
     } else {
@@ -63,6 +90,7 @@ export default function DemoModeToggle({ walletIds }: DemoModeToggleProps) {
           }`}
         />
         Demo Mode {isOn ? `· ${DEMO_AMOUNT} USDC` : "Off"}
+
       </button>
     </div>
   );

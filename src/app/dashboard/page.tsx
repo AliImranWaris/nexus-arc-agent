@@ -12,6 +12,38 @@ import {
   useWalletSession,
 } from "@/components/WalletSessionProvider";
 
+function ResetForJudgesButton() {
+  const { reset } = useWalletSession();
+  const [busy, setBusy] = useState(false);
+  const onClick = async () => {
+    if (busy) return;
+    if (!confirm("Reset session and clear demo overrides? This starts a brand-new wallet session — useful for re-recording the PIN setup flow.")) {
+      return;
+    }
+    setBusy(true);
+    try {
+      await reset();
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <button
+      onClick={onClick}
+      disabled={busy}
+      title="Clear local userId, demo balances, and start a fresh Circle session"
+      className="flex items-center gap-1.5 rounded-full border border-rose-700/50 bg-rose-950/30 px-2.5 py-1 text-[11px] font-medium text-rose-300 hover:border-rose-500 hover:text-rose-200 transition-colors disabled:opacity-50"
+    >
+      <svg className={`h-3 w-3 ${busy ? "animate-spin" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M23 4v6h-6" />
+        <path d="M1 20v-6h6" />
+        <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15" />
+      </svg>
+      {busy ? "Resetting…" : "Reset for Judges"}
+    </button>
+  );
+}
+
 function SessionBanner() {
   const { status, session, error, renew } = useWalletSession();
 
@@ -141,7 +173,8 @@ function DashboardContent() {
           </div>
           <div className="flex items-center gap-2">
             <DemoModeToggle walletIds={walletsForTools.map((w) => w.id)} />
-            <span className="hidden md:flex items-center gap-1.5 rounded-full border border-slate-700 bg-slate-900/60 px-3 py-1 text-xs text-slate-400">
+            <ResetForJudgesButton />
+            <span className="hidden lg:flex items-center gap-1.5 rounded-full border border-slate-700 bg-slate-900/60 px-3 py-1 text-xs text-slate-400">
               User-controlled · Self-custody
             </span>
             <span className="flex items-center gap-1.5 rounded-full border border-emerald-700/50 bg-emerald-950/40 px-3 py-1 text-xs text-emerald-400">
