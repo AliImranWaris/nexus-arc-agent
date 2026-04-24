@@ -17,8 +17,11 @@ export interface TransferRequestBody {
 /**
  * POST /api/wallet/transfer
  *
- * Initiates a USDC transfer on Arc Testnet (auto-selected via the
- * TEST_API_KEY prefix on CIRCLE_API_KEY). The Circle SDK returns a
+ * Initiates a USDC transfer on the source wallet's blockchain
+ * (typically Arc Testnet via TEST_API_KEY). The USDC tokenId is
+ * resolved from the wallet's own token balances at request time, so
+ * the wallet and token are always on the same chain — no
+ * "blockchain mismatch" possible. The Circle SDK returns a
  * challengeId — the client must complete it via Circle's PIN/biometric
  * flow before settlement. No private key ever leaves the user's device.
  */
@@ -58,13 +61,41 @@ export async function POST(req: NextRequest) {
 
     const client = getCircleClient();
 
+    // Confirm the source wallet exists and capture its blockchain
+    const walletRes = await client.getWallet({ userToken, id: sourceWalletId });
+    const wallet = walletRes.data?.wallet;
+    if (!wallet) {
+      return NextResponse.json(
+        { error: `Source wallet ${sourceWalletId} not found for this user.` },
+        { status: 404 },
+      );
+    }
+
+    // Resolve the USDC tokenId on the wallet's own chain
+    const balRes = await client.getWalletTokenBalance({
+      userToken,
+      walletId: sourceWalletId,
+    });
+    const usdcEntry = (balRes.data?.tokenBalances ?? []).find(
+      (b) => b.token?.symbol === "USDC",
+    );
+    const usdcTokenId = usdcEntry?.token?.id;
+
+    if (!usdcTokenId) {
+      return NextResponse.json(
+        {
+          error: `No USDC token found for wallet ${sourceWalletId} on ${wallet.blockchain}. Fund the wallet with testnet USDC before transferring.`,
+        },
+        { status: 400 },
+      );
+    }
+
     const transferRes = await client.createTransaction({
       userToken,
       idempotencyKey: uuidv4(),
       walletId: sourceWalletId,
       destinationAddress,
-      // USDC token contract id on Arc Testnet (Circle Sandbox)
-      tokenId: "5797fbd6-3795-519d-84ca-ec4c5f80c3b1",
+      tokenId: usdcTokenId,
       amounts: [amount],
       fee: {
         type: "level",
@@ -79,8 +110,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       challengeId,
-      message:
-        "Challenge created. Complete the PIN/biometric step in your wallet app to authorise and settle this transaction on Arc Testnet.",
+      blockchain: wallet.blockchain,
+      tokenId: usdcTokenId,
+      message: `Challenge created on ${wallet.blockchain}. Complete the PIN/biometric step in your wallet app to authorise and settle this transaction.`,
     });
   } catch (err: unknown) {
     const sessionFail = sessionErrorResponse(err);
