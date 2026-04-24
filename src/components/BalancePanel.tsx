@@ -144,6 +144,7 @@ export default function BalancePanel({ onWalletSelect, selectedWalletId }: Balan
               wallet={wallet}
               selected={selectedWalletId === wallet.id}
               onSelect={onWalletSelect}
+              onFunded={fetchBalances}
             />
           ))}
         </div>

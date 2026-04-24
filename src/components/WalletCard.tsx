@@ -1,5 +1,7 @@
 "use client";
 
+import FaucetButton from "./FaucetButton";
+
 interface Wallet {
   id: string;
   address: string;
@@ -12,9 +14,10 @@ interface WalletCardProps {
   wallet: Wallet;
   selected: boolean;
   onSelect: (id: string) => void;
+  onFunded?: () => void;
 }
 
-export default function WalletCard({ wallet, selected, onSelect }: WalletCardProps) {
+export default function WalletCard({ wallet, selected, onSelect, onFunded }: WalletCardProps) {
   const shortAddress = `${wallet.address.slice(0, 6)}...${wallet.address.slice(-4)}`;
 
   return (
@@ -53,6 +56,15 @@ export default function WalletCard({ wallet, selected, onSelect }: WalletCardPro
       {selected && (
         <div className="mt-3 pt-3 border-t border-indigo-800/50">
           <p className="text-xs text-indigo-400">Selected as source wallet</p>
+        </div>
+      )}
+      {onFunded && (
+        <div className="mt-3 pt-3 border-t border-slate-700/60">
+          <FaucetButton
+            walletId={wallet.id}
+            blockchain={wallet.blockchain}
+            onFunded={onFunded}
+          />
         </div>
       )}
     </button>
